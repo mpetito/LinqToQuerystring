@@ -24,11 +24,32 @@
                 var parameter = Expression.Parameter(this.inputType, "o");
                 var childExpression = child.BuildLinqExpression(query, query.Expression, parameter);
 
-                var member = childExpression as MemberExpression;
-                query = query.Include(member.Member.Name);
+                var path = GetMemberPath(childExpression, parameter);
+                query = query.Include(path);
             }
 
             return query;
+        }
+
+        static string GetMemberPath(Expression expr, ParameterExpression param)
+        {
+            if (expr == param) return null;
+
+            var me = expr as MemberExpression;
+            if (me != null)
+            {
+                var root = GetMemberPath(me.Expression, param);
+
+                return root == null ? me.Member.Name : string.Concat(root, ".", me.Member.Name);
+            }
+
+            var ue = expr as UnaryExpression;
+            if (ue != null)
+            {
+                return GetMemberPath(ue.Operand, param);
+            }
+
+            return null;
         }
     }
 }
